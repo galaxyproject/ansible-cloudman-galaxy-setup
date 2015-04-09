@@ -8,11 +8,9 @@
   copy: src={{ item.src }} dest={{ item.dest }} backup=yes
   with_items: cmg_setup_files
 
-# Hook for extra files to be copied
 - name: Copy Galaxy extra, user-defined files (static)
   copy: src={{ item.src }} dest={{ item.dest }} owner={{ galaxy_user_name }} group={{ galaxy_user_name }}
   with_items: cmg_extra_files
-  when: cmg_extra_files is defined
 
 - name: Create Galaxy Install DB
   command: "{{ galaxy_venv_dir }}/bin/python {{ galaxy_server_dir }}/scripts/create_db.py -c {{ galaxy_config_file }} install chdir={{ galaxy_server_dir }}"
