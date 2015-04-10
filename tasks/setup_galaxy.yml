@@ -17,3 +17,9 @@
 
 - name: Set Galaxy's PYTHON_EGG_CACHE
   lineinfile: dest={{ galaxy_server_dir }}/run.sh line="export PYTHON_EGG_CACHE={{ galaxyFS_base_dir }}/.python_eggs" insertafter="^#!/bin/sh"
+
+- name: Install node packages for IPython IE
+  command: npm install chdir="{{ galaxy_server_dir }}/lib/galaxy/web/proxy/js"
+
+- name: Place ipython.ini file
+  copy: src=galaxy/ipython.ini dest="{{ galaxy_server_dir }}/config/plugins/interactive_environments/ipython/config/ipython.ini" owner={{ galaxy_user_name }}
