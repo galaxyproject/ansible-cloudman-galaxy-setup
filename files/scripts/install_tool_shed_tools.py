@@ -154,7 +154,7 @@ def _tools_to_install(owners=['devteam', 'iuc'], return_formatted=False):
 
     *Note*: there is no way to programatically get a category a tool belongs in
     a Tool Shed so the returned list cannot simply be used as the input file but
-    (manual!?!) adjustment is necessesary to provide tool categort for each tool.
+    (manual!?!) adjustment is necessesary to provide tool category for each tool.
     """
     tsi = ToolShedInstance('https://toolshed.g2.bx.psu.edu')
     repos = tsi.repositories.get_repositories()
@@ -169,12 +169,15 @@ def _tools_to_install(owners=['devteam', 'iuc'], return_formatted=False):
     return tti
 
 
-def _parse_tool_list(tl):
+def parse_tool_list(tl):
     """
     A convenience method for parsing the output from an API call to a Galaxy
     instance listing all the tools installed on the given instance and
-    formatting it for use by functions in this file. Sample API call:
-    `https://test.galaxyproject.org/api/tools?in_panel=true`
+    formatting it for use by functions in this file.
+
+    Sample GET call: `https://test.galaxyproject.org/api/tools?in_panel=true`.
+    Via the API, call `gi.tools.get_tool_panel()` to get the list of tools on
+    a given Galaxy instance `gi`.
 
     :type tl: list
     :param tl: A list of dicts with info about the tools
@@ -209,6 +212,18 @@ def _parse_tool_list(tl):
                 # print "\t%s" % t['id']
                 custom_tools.append(t['id'])
     return ts_tools, custom_tools
+
+
+def _list_tool_categories(tl):
+    """
+    Given a list of dicts `tl` as returned by the `parse_tool_list` method and
+    where each list element holds a key `tool_panel_section_id`, return a list
+    of unique section IDs.
+    """
+    category_list = []
+    for t in tl:
+        category_list.append(t.get('tool_panel_section_id'))
+    return set(category_list)
 
 
 def _parse_cli_options():
