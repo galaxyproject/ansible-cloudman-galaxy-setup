@@ -282,7 +282,7 @@ def run_data_managers(options):
             start = dt.datetime.now()
             log.debug('[dbkey {0}/{1}; DM: {2}/{3}] Installing dbkey {4} with '
                       'DM {5}'.format(dbkey_counter, len(dbkeys), dm_counter,
-                      len(dms), dbkey_name, dm_tool))
+                                      len(dms), dbkey_name, dm_tool))
             tool_input = dbkey
             try:
                 response = gi.tools.run_tool('', dm_tool, tool_input)
@@ -357,7 +357,7 @@ def install_tools(options):
             if r['name'] == it['name'] and r['owner'] == it['owner'] and \
                it['tool_shed'] in r['tool_shed_url'] and it['latest']:
                 log.debug("({0}/{1}) Tool {2} already installed. Skipping..."
-                       .format(counter, total_num_tools, r['name']))
+                          .format(counter, total_num_tools, r['name']))
                 skipped_tools.append({'name': r['name'], 'owner': r['owner']})
                 already_installed = True
                 break
@@ -369,12 +369,14 @@ def install_tools(options):
                     r['name'], r['owner'])[-1]
             # Initate tool installation
             start = dt.datetime.now()
-            log.debug('(%s/%s) Installing tool %s from %s to section %s' % (counter,
-                total_num_tools, r['name'], r['owner'], r.get('tool_panel_section_id', 'N/A')))
+            log.debug('(%s/%s) Installing tool %s from %s to section %s' %
+                      (counter, total_num_tools, r['name'], r['owner'],
+                       r.get('tool_panel_section_id', 'N/A')))
             try:
-                response = tsc.install_repository_revision(r['tool_shed_url'], r['name'],
-                    r['owner'], r['revision'], r['install_tool_dependencies'],
-                    r['install_repository_dependencies'], r.get('tool_panel_section_id', ''))
+                response = tsc.install_repository_revision(
+                    r['tool_shed_url'], r['name'], r['owner'], r['revision'],
+                    r['install_tool_dependencies'], r['install_repository_dependencies'],
+                    r.get('tool_panel_section_id', ''))
                 tool_id = None
                 tool_status = None
                 if len(response) > 0:
@@ -397,12 +399,13 @@ def install_tools(options):
                 response = None
                 end = dt.datetime.now()
                 if default_err_msg in e.body:
-                    log.debug("\tTool %s already installed (at revision %s)" % (r['name'],
-                           r['revision']))
+                    log.debug("\tTool %s already installed (at revision %s)" %
+                              (r['name'], r['revision']))
                 else:
                     log.error("\t* Error installing a tool (after %s)! Name: %s,"
-                              "owner: %s, revision: %s, error: %s" % (r['name'],
-                              str(end - start), r['owner'], r['revision'], e.body))
+                              "owner: %s, revision: %s, error: %s" %
+                              (r['name'], str(end - start), r['owner'],
+                               r['revision'], e.body))
                     errored_tools.append({'name': r['name'], 'owner': r['owner'],
                                           'revision': r['revision'], 'error': e.body})
             outcome = {'tool': r, 'response': response, 'duration': str(end - start)}
