@@ -369,9 +369,9 @@ def install_tools(options):
                     r['name'], r['owner'])[-1]
             # Initate tool installation
             start = dt.datetime.now()
-            log.debug('(%s/%s) Installing tool %s from %s to section %s' %
+            log.debug('(%s/%s) Installing tool %s from %s to section %s (TRT: %s)' %
                       (counter, total_num_tools, r['name'], r['owner'],
-                       r.get('tool_panel_section_id', 'N/A')))
+                       r.get('tool_panel_section_id', 'N/A'), dt.datetime.now() - istart))
             try:
                 response = tsc.install_repository_revision(
                     r['tool_shed_url'], r['name'], r['owner'], r['revision'],
@@ -412,8 +412,10 @@ def install_tools(options):
             responses.append(outcome)
         counter += 1
 
-    log.info("Skipped tools: {0}".format(skipped_tools))
-    log.info("Errored tools: {0}".format(errored_tools))
+    log.info("Skipped tools ({0}): {1}".format(
+             len(skipped_tools), [t.get('name') for t in skipped_tools]))
+    log.info("Errored tools ({0}): {1}".format(
+             len(errored_tools), [t.get('name') for t in errored_tools]))
     log.info("All tools listed in '{0}' have been processed.".format(tool_list_file))
     log.info("Total run time: {0}".format(dt.datetime.now() - istart))
 
