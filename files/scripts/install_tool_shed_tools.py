@@ -1,10 +1,10 @@
 """
-A script to automate installation of tool repositories from a Galaxy Toolshed
-and reference genomic data via Galaxy Data Managers into an instance of Galaxy.
+A script to automate installation of tool repositories from a Galaxy Tool Shed
+into an instance of Galaxy.
 
 Galaxy instance details and the installed tools need to be provided in YAML
-format in a file called ``shed_tool_list.yaml``. See
-``shed_tool_list.yaml.sample`` for a sample of such a file.
+format in a separate file; see ``shed_tool_list.yaml.sample`` for a sample of
+such file.
 
 When installing tools, this script expects any `tool_panel_section_id` provided
 in the input file to already exist on the target Galaxy instance. If the section
