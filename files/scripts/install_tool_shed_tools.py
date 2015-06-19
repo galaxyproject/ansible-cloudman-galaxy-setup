@@ -344,7 +344,13 @@ def install_tools(options):
     errored_tools = []
     skipped_tools = []
     counter = 1
-    total_num_tools = len(tools_info)
+    total_num_tools = 0
+    # Count the total number of tools and tool revisions
+    for tool_info in tools_info:
+        if tool_info.get('revisions', []):
+            total_num_tools += len(tool_info.get('revisions'))
+        else:
+            total_num_tools += 1
     default_err_msg = ('All repositories that you are attempting to install '
                        'have been previously installed.')
     for tool_info in tools_info:
