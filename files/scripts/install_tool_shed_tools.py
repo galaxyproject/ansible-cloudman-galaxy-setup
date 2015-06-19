@@ -377,54 +377,60 @@ def install_tools(options):
         if not already_installed:
             # Set the payload
             ts = ToolShedInstance(url=tool['tool_shed_url'])
-            if 'revision' not in tool_info:
-                tool['revision'] = ts.repositories.get_ordered_installable_revisions(
-                    tool['name'], tool['owner'])[-1]
-            # Initate tool installation
-            start = dt.datetime.now()
-            log.debug('(%s/%s) Installing tool %s from %s to section %s (TRT: %s)' %
-                      (counter, total_num_tools, tool['name'], tool['owner'],
-                       tool.get('tool_panel_section_id', 'N/A'),
-                       dt.datetime.now() - istart))
-            try:
-                response = tsc.install_repository_revision(
-                    tool['tool_shed_url'], tool['name'], tool['owner'],
-                    tool['revision'], tool['install_tool_dependencies'],
-                    tool['install_repository_dependencies'],
-                    tool['tool_panel_section_id'])
-                tool_id = None
-                tool_status = None
-                if len(response) > 0:
-                    tool_id = response[0].get('id', None)
-                    tool_status = response[0].get('status', None)
-                if tool_id and tool_status:
-                    # Possibly an infinite loop here. Introduce a kick-out counter?
-                    log.debug("\tTool installing", extra={'same_line': True})
-                    while tool_status not in ['Installed', 'Error']:
-                        log.debug("", extra={'same_line': True})
-                        time.sleep(10)
-                        tool_status = update_tool_status(tsc, tool_id)
+            # Iterrate through tool install revisions and install them all
+            # If `revisions` key is not specified in the tools list yaml file,
+            # fetch the latest tool revision
+            revisions = tool_info.get('revisions', [
+                ts.repositories.get_ordered_installable_revisions(
+                    tool['name'], tool['owner'])[-1]])
+            for revision in revisions:
+                tool['revision'] = revision
+                # Initate tool installation
+                start = dt.datetime.now()
+                log.debug('(%s/%s) Installing tool %s from %s to section %s at '
+                          'revision %s (TRT: %s)' %
+                          (counter, total_num_tools, tool['name'], tool['owner'],
+                           tool['tool_panel_section_id'], tool['revision'],
+                           dt.datetime.now() - istart))
+                try:
+                    response = tsc.install_repository_revision(
+                        tool['tool_shed_url'], tool['name'], tool['owner'],
+                        tool['revision'], tool['install_tool_dependencies'],
+                        tool['install_repository_dependencies'],
+                        tool['tool_panel_section_id'])
+                    tool_id = None
+                    tool_status = None
+                    if len(response) > 0:
+                        tool_id = response[0].get('id', None)
+                        tool_status = response[0].get('status', None)
+                    if tool_id and tool_status:
+                        # Possibly an infinite loop here. Introduce a kick-out counter?
+                        log.debug("\tTool installing", extra={'same_line': True})
+                        while tool_status not in ['Installed', 'Error']:
+                            log.debug("", extra={'same_line': True})
+                            time.sleep(10)
+                            tool_status = update_tool_status(tsc, tool_id)
+                        end = dt.datetime.now()
+                        log.debug("\tTool %s installed successfully (in %s) at revision %s"
+                                  % (tool['name'], str(end - start), tool['revision']))
+                    else:
+                        end = dt.datetime.now()
+                        log.error("\tCould not retrieve tool status for {0}".format(tool['name']))
+                except ConnectionError, e:
+                    response = None
                     end = dt.datetime.now()
-                    log.debug("\tTool %s installed successfully (in %s) at revision %s"
-                              % (tool['name'], str(end - start), tool['revision']))
-                else:
-                    end = dt.datetime.now()
-                    log.error("\tCould not retrieve tool status for {0}".format(tool['name']))
-            except ConnectionError, e:
-                response = None
-                end = dt.datetime.now()
-                if default_err_msg in e.body:
-                    log.debug("\tTool %s already installed (at revision %s)" %
-                              (tool['name'], tool['revision']))
-                else:
-                    log.error("\t* Error installing a tool (after %s)! Name: %s,"
-                              "owner: %s, revision: %s, error: %s" %
-                              (tool['name'], str(end - start), tool['owner'],
-                               tool['revision'], e.body))
-                    errored_tools.append({'name': tool['name'], 'owner': tool['owner'],
-                                          'revision': tool['revision'], 'error': e.body})
-            outcome = {'tool': tool, 'response': response, 'duration': str(end - start)}
-            responses.append(outcome)
+                    if default_err_msg in e.body:
+                        log.debug("\tTool %s already installed (at revision %s)" %
+                                  (tool['name'], tool['revision']))
+                    else:
+                        log.error("\t* Error installing a tool (after %s)! Name: %s,"
+                                  "owner: %s, revision: %s, error: %s" %
+                                  (tool['name'], str(end - start), tool['owner'],
+                                   tool['revision'], e.body))
+                        errored_tools.append({'name': tool['name'], 'owner': tool['owner'],
+                                              'revision': tool['revision'], 'error': e.body})
+                outcome = {'tool': tool, 'response': response, 'duration': str(end - start)}
+                responses.append(outcome)
         counter += 1
 
     log.info("Skipped tools ({0}): {1}".format(
