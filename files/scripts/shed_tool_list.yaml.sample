@@ -6,21 +6,21 @@
 # For each tool you want to install, you must provide the follwing keys:
 #  * name: this is is the name of the tool to install
 #  * owner: owner of the Tool Shed repository from where the tools is being
-#			installed
+#           installed
 #  * tool_panel_section_id: ID of the tool panel section where you want the
-#						    tool to be installed. The section ID can be found
-#							in Galaxy's `shed_tool_conf.xml` config file
+#                           tool to be installed. The section ID can be found
+#                           in Galaxy's `shed_tool_conf.xml` config file
 #
 # In addition, you can specify the following optional keys to further define
 # installtion properties:
 #  * tool_shed_url: the URL of the Tool Shed from where the tool should be
-#					installed. (default: https://toolshed.g2.bx.psu.edu)
+#                   installed. (default: https://toolshed.g2.bx.psu.edu)
 #  * revisions: a list of revisions of the tool, all of which will atempt to
-#				be installed. (default: latest)
+#               be installed. (default: latest)
 #  * install_tool_dependencies: True or False - whether to install tool
-#								dependencies or not. (default: True)
+#                               dependencies or not. (default: True)
 #  * install_repository_dependencies: True or False - whether to install repo
-#								dependencies or not. (default: True)
+#                               dependencies or not. (default: True)
 
 api_key: <Admin user API key from galaxy_instance>
 galaxy_instance: <Galaxy instance IP>
