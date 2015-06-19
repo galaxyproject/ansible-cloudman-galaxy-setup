@@ -344,40 +344,54 @@ def install_tools(options):
     skipped_tools = []
     counter = 1
     total_num_tools = len(tools_info)
-    default_err_msg = 'All repositories that you are attempting to install have been previously installed.'
-    for r in tools_info:
+    default_err_msg = ('All repositories that you are attempting to install '
+                       'have been previously installed.')
+    for tool_info in tools_info:
+        tool = {}  # Payload for the tool we are installing
         already_installed = False
-        if 'install_tool_dependencies' not in r:
-            r['install_tool_dependencies'] = True
-        if 'install_repository_dependencies' not in r:
-            r['install_repository_dependencies'] = True
-        if 'tool_shed_url' not in r:
-            r['tool_shed_url'] = 'https://toolshed.g2.bx.psu.edu'
+        # Copy required `tool_info` keys into the `tool` dict
+        tool['name'] = tool_info.get('name', None)
+        tool['owner'] = tool_info.get('owner', None)
+        tool['tool_panel_section_id'] = tool_info.get('tool_panel_section_id', None)
+        if not tool['name'] or not tool['owner'] or not tool['tool_panel_section_id']:
+            log.error("Missing required tool info field -> name: '{0}'; "
+                      "owner: '{1}'; tool_panel_section_id: '{2}'"
+                      .format(tool['name'], tool['owner'], tool['tool_panel_section_id']))
+        # Populate fields that can optionally be provided (if not provided,
+        # they will be retrieved automatically)
+        tool['install_tool_dependencies'] = \
+            tool_info.get('install_tool_dependencies', True)
+        tool['install_repository_dependencies'] = \
+            tool_info.get('install_repository_dependencies', True)
+        tool['tool_shed_url'] = \
+            tool_info.get('tool_shed_url', 'https://toolshed.g2.bx.psu.edu')
         # Check if the tool is already installed
         for it in itl:
-            if r['name'] == it['name'] and r['owner'] == it['owner'] and \
-               it['tool_shed'] in r['tool_shed_url'] and it['latest']:
+            if tool['name'] == it['name'] and tool['owner'] == it['owner'] and \
+               it['tool_shed'] in tool['tool_shed_url'] and it['latest']:
                 log.debug("({0}/{1}) Tool {2} already installed. Skipping..."
-                          .format(counter, total_num_tools, r['name']))
-                skipped_tools.append({'name': r['name'], 'owner': r['owner']})
+                          .format(counter, total_num_tools, tool['name']))
+                skipped_tools.append({'name': tool['name'], 'owner': tool['owner']})
                 already_installed = True
                 break
         if not already_installed:
             # Set the payload
-            ts = ToolShedInstance(url=r['tool_shed_url'])
-            if 'revision' not in r:
-                r['revision'] = ts.repositories.get_ordered_installable_revisions(
-                    r['name'], r['owner'])[-1]
+            ts = ToolShedInstance(url=tool['tool_shed_url'])
+            if 'revision' not in tool_info:
+                tool['revision'] = ts.repositories.get_ordered_installable_revisions(
+                    tool['name'], tool['owner'])[-1]
             # Initate tool installation
             start = dt.datetime.now()
             log.debug('(%s/%s) Installing tool %s from %s to section %s (TRT: %s)' %
-                      (counter, total_num_tools, r['name'], r['owner'],
-                       r.get('tool_panel_section_id', 'N/A'), dt.datetime.now() - istart))
+                      (counter, total_num_tools, tool['name'], tool['owner'],
+                       tool.get('tool_panel_section_id', 'N/A'),
+                       dt.datetime.now() - istart))
             try:
                 response = tsc.install_repository_revision(
-                    r['tool_shed_url'], r['name'], r['owner'], r['revision'],
-                    r['install_tool_dependencies'], r['install_repository_dependencies'],
-                    r.get('tool_panel_section_id', ''))
+                    tool['tool_shed_url'], tool['name'], tool['owner'],
+                    tool['revision'], tool['install_tool_dependencies'],
+                    tool['install_repository_dependencies'],
+                    tool['tool_panel_section_id'])
                 tool_id = None
                 tool_status = None
                 if len(response) > 0:
@@ -392,24 +406,24 @@ def install_tools(options):
                         tool_status = update_tool_status(tsc, tool_id)
                     end = dt.datetime.now()
                     log.debug("\tTool %s installed successfully (in %s) at revision %s"
-                              % (r['name'], str(end - start), r['revision']))
+                              % (tool['name'], str(end - start), tool['revision']))
                 else:
                     end = dt.datetime.now()
-                    log.error("\tCould not retrieve tool status for {0}".format(r['name']))
+                    log.error("\tCould not retrieve tool status for {0}".format(tool['name']))
             except ConnectionError, e:
                 response = None
                 end = dt.datetime.now()
                 if default_err_msg in e.body:
                     log.debug("\tTool %s already installed (at revision %s)" %
-                              (r['name'], r['revision']))
+                              (tool['name'], tool['revision']))
                 else:
                     log.error("\t* Error installing a tool (after %s)! Name: %s,"
                               "owner: %s, revision: %s, error: %s" %
-                              (r['name'], str(end - start), r['owner'],
-                               r['revision'], e.body))
-                    errored_tools.append({'name': r['name'], 'owner': r['owner'],
-                                          'revision': r['revision'], 'error': e.body})
-            outcome = {'tool': r, 'response': response, 'duration': str(end - start)}
+                              (tool['name'], str(end - start), tool['owner'],
+                               tool['revision'], e.body))
+                    errored_tools.append({'name': tool['name'], 'owner': tool['owner'],
+                                          'revision': tool['revision'], 'error': e.body})
+            outcome = {'tool': tool, 'response': response, 'duration': str(end - start)}
             responses.append(outcome)
         counter += 1
 
