@@ -123,11 +123,14 @@ def installed_tools(tsc=None):
     installed_tools_list = []
     itl = tsc.get_repositories()
     for it in itl:
+        latest = None
+        if it.get('tool_shed_status', None):
+            latest = it['tool_shed_status'].get('latest_installable_revision', None)
         if it['status'] == 'Installed':
             installed_tools_list.append({'name': it['name'],
                                          'owner': it['owner'],
                                          'tool_shed': it['tool_shed'],
-                                         'latest': it['tool_shed_status']['latest_installable_revision']})
+                                         'latest': latest})
     return installed_tools_list
 
 
