@@ -376,6 +376,7 @@ def install_tools(options):
             total_num_tools += 1
     default_err_msg = ('All repositories that you are attempting to install '
                        'have been previously installed.')
+    # Process each tool: check if it's already installed or install it
     for tool_info in tools_info:
         tool = {}  # Payload for the tool we are installing
         already_installed = False
@@ -383,10 +384,15 @@ def install_tools(options):
         tool['name'] = tool_info.get('name', None)
         tool['owner'] = tool_info.get('owner', None)
         tool['tool_panel_section_id'] = tool_info.get('tool_panel_section_id', None)
-        if not tool['name'] or not tool['owner'] or not tool['tool_panel_section_id']:
-            log.error("Missing required tool info field -> name: '{0}'; "
-                      "owner: '{1}'; tool_panel_section_id: '{2}'"
+        # Check if all required tool sections have been provided; if not, skip.
+        # Data managers are an exception but they must contain string
+        # `data_manager` within the tool name.
+        if not tool['name'] or not tool['owner'] or (not tool['tool_panel_section_id']
+                                                     and 'data_manager' not in tool.get('name', '')):
+            log.error("Missing required tool info field; skipping [name: '{0}'; "
+                      "owner: '{1}'; tool_panel_section_id: '{2}']"
                       .format(tool['name'], tool['owner'], tool['tool_panel_section_id']))
+            continue
         # Populate fields that can optionally be provided (if not provided,
         # they will be retrieved automatically)
         tool['install_tool_dependencies'] = \
