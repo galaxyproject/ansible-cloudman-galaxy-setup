@@ -112,6 +112,20 @@ def tool_shed_client(gi=None):
     return ToolShedClient(gi)
 
 
+def the_same_tool(tool_1_info, tool_2_info):
+    """
+    Given two dicts containing info about tools, determine if they are the same
+    tool.
+
+    Each of the dicts must have the following keys: `name`, `owner`, `tool_shed`
+    """
+    if tool_1_info.get('name') == tool_2_info.get('name') and \
+       tool_1_info.get('owner') == tool_2_info.get('owner') and \
+       tool_1_info.get('tool_shed') == tool_2_info.get('tool_shed'):
+        return True
+    return False
+
+
 def installed_tools(tsc=None):
     """
     Return a list of tools installed on the Galaxy instance via the tool shed
@@ -123,14 +137,20 @@ def installed_tools(tsc=None):
     installed_tools_list = []
     itl = tsc.get_repositories()
     for it in itl:
-        latest = None
-        if it.get('tool_shed_status', None):
-            latest = it['tool_shed_status'].get('latest_installable_revision', None)
-        if it['status'] == 'Installed':
+        # Check if we've already encountered this tool and store the new revision
+        processed = False
+        for t in installed_tools_list:
+            if the_same_tool(it, t):
+                if it.get('changeset_revision', None) not in t['revisions']:
+                    t['revisions'].append(it.get('changeset_revision', None))
+                    processed = True
+                    break
+        # If we haven't processed this tool yet, store the info now
+        if it['status'] == 'Installed' and not processed:
             installed_tools_list.append({'name': it['name'],
                                          'owner': it['owner'],
                                          'tool_shed': it['tool_shed'],
-                                         'latest': latest})
+                                         'revisions': [it.get('changeset_revision', None)]})
     return installed_tools_list
 
 
