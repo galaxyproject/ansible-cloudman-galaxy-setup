@@ -117,41 +117,46 @@ def the_same_tool(tool_1_info, tool_2_info):
     Given two dicts containing info about tools, determine if they are the same
     tool.
 
-    Each of the dicts must have the following keys: `name`, `owner`, `tool_shed`
+    Each of the dicts must have the following keys: `name`, `owner`, and
+    (either `tool_shed` or `tool_shed_url`).
     """
+    t1ts = tool_1_info.get('tool_shed', tool_1_info.get('tool_shed_url', None))
+    t2ts = tool_2_info.get('tool_shed', tool_2_info.get('tool_shed_url', None))
+
     if tool_1_info.get('name') == tool_2_info.get('name') and \
        tool_1_info.get('owner') == tool_2_info.get('owner') and \
-       tool_1_info.get('tool_shed') == tool_2_info.get('tool_shed'):
+       (t1ts in t2ts or t2ts in t1ts):
         return True
     return False
 
 
-def installed_tools(tsc=None):
+def installed_revisions(tsc=None):
     """
-    Return a list of tools installed on the Galaxy instance via the tool shed
-    client `tsc`. If the `tsc` is not specified, use the default one by calling
-    `tool_shed_client` method.
+    Return a list of tool revisions installed on the Galaxy instance via the Tool
+    Shed client `tsc`. If the `tsc` is not specified, use the default one by
+    calling `tool_shed_client` method.
+
+    :rtype: list of dicts
+    :return: Each dict in the returned list will have the following keys:
+             `name`, `owner`, `tool_shed`, `revision`, and `latest` (the value
+             for this key will be `True` if the installed revision is the
+             `latest_installable_revision`).
     """
     if not tsc:
         tsc = tool_shed_client()
-    installed_tools_list = []
+    installed_revisions_list = []
     itl = tsc.get_repositories()
     for it in itl:
-        # Check if we've already encountered this tool and store the new revision
-        processed = False
-        for t in installed_tools_list:
-            if the_same_tool(it, t):
-                if it.get('changeset_revision', None) not in t['revisions']:
-                    t['revisions'].append(it.get('changeset_revision', None))
-                    processed = True
-                    break
-        # If we haven't processed this tool yet, store the info now
-        if it['status'] == 'Installed' and not processed:
-            installed_tools_list.append({'name': it['name'],
-                                         'owner': it['owner'],
-                                         'tool_shed': it['tool_shed'],
-                                         'revisions': [it.get('changeset_revision', None)]})
-    return installed_tools_list
+        latest = None
+        if it.get('tool_shed_status', None):
+            latest = it['tool_shed_status'].get('latest_installable_revision', None)
+        if it['status'] == 'Installed':
+            installed_revisions_list.append({'name': it['name'],
+                                             'owner': it['owner'],
+                                             'tool_shed': it['tool_shed'],
+                                             'revision': it.get('changeset_revision', None),
+                                             'latest': latest})
+    return installed_revisions_list
 
 
 def update_tool_status(tool_shed_client, tool_id):
@@ -277,6 +282,50 @@ def _parse_cli_options():
     return options
 
 
+def _flatten_tools_info(tools_info):
+    """
+    Flatten the dict containing info about what tools to install.
+
+    The tool definition YAML file allows multiple revisions to be listed for
+    the same tool. To enable simple, iterattive processing of the info in this
+    script, flatten the `tools_info` list to include one entry per tool revision.
+
+    :type tools_info: list of dicts
+    :param tools_info: Each dict in this list should contain info about a tool.
+
+    :rtype: list of dicts
+    :return: Return a list of dicts that correspond to the input argument such
+             that if an input element contained `revisions` key with multiple
+             values, those will be returned as separate list items.
+    """
+    def _copy_dict(d):
+        """
+        Iterrate through the dictionary `d` and copy its keys and values
+        excluding the key `revisions`.
+        """
+        new_d = {}
+        for k, v in d.iteritems():
+            if k != 'revisions':
+                new_d[k] = v
+        return new_d
+
+    flattened_list = []
+    for tool_info in tools_info:
+        revisions = tool_info.get('revisions', [])
+        if len(revisions) > 1:
+            for revision in revisions:
+                ti = _copy_dict(tool_info)
+                ti['revision'] = revision
+                flattened_list.append(ti)
+        elif revisions:  # A single revisions was defined so keep it
+            ti = _copy_dict(tool_info)
+            ti['revision'] = revisions[0]
+            flattened_list.append(ti)
+        else:  # Revision was not defined at all
+            flattened_list.append(tool_info)
+    return flattened_list
+
+
 def run_data_managers(options):
     """
     Run Galaxy Data Manager to download, index, and install reference genome
@@ -361,118 +410,111 @@ def install_tools(options):
     api_key = options.api_key or tl['api_key']
     gi = galaxy_instance(galaxy_url, api_key)
     tsc = tool_shed_client(gi)
-    itl = installed_tools(tsc)  # installed tools list
+    itl = installed_revisions(tsc)  # installed tools list
 
     responses = []
     errored_tools = []
     skipped_tools = []
-    counter = 1
-    total_num_tools = 0
-    # Count the total number of tools and tool revisions
-    for tool_info in tools_info:
-        if tool_info.get('revisions', []):
-            total_num_tools += len(tool_info.get('revisions'))
-        else:
-            total_num_tools += 1
+    counter = 0
+    tools_info = _flatten_tools_info(tools_info)
+    total_num_tools = len(tools_info)
     default_err_msg = ('All repositories that you are attempting to install '
                        'have been previously installed.')
-    # Process each tool: check if it's already installed or install it
+
+    # Process each tool/revision: check if it's already installed or install it
     for tool_info in tools_info:
+        counter += 1
+        already_installed = False  # Reset the flag
         tool = {}  # Payload for the tool we are installing
-        already_installed = False
         # Copy required `tool_info` keys into the `tool` dict
         tool['name'] = tool_info.get('name', None)
         tool['owner'] = tool_info.get('owner', None)
         tool['tool_panel_section_id'] = tool_info.get('tool_panel_section_id', None)
-        # Check if all required tool sections have been provided; if not, skip.
-        # Data managers are an exception but they must contain string
-        # `data_manager` within the tool name.
+        # Check if all required tool sections have been provided; if not, skip
+        # the installation of this tool. Note that data managers are an exception
+        # but they must contain string `data_manager` within the tool name.
         if not tool['name'] or not tool['owner'] or (not tool['tool_panel_section_id']
                                                      and 'data_manager' not in tool.get('name', '')):
             log.error("Missing required tool info field; skipping [name: '{0}'; "
                       "owner: '{1}'; tool_panel_section_id: '{2}']"
                       .format(tool['name'], tool['owner'], tool['tool_panel_section_id']))
             continue
-        # Populate fields that can optionally be provided (if not provided,
-        # they will be retrieved automatically)
+        # Populate fields that can optionally be provided (if not provided, set
+        # defaults).
         tool['install_tool_dependencies'] = \
             tool_info.get('install_tool_dependencies', True)
         tool['install_repository_dependencies'] = \
             tool_info.get('install_repository_dependencies', True)
         tool['tool_shed_url'] = \
-            tool_info.get('tool_shed_url', 'https://toolshed.g2.bx.psu.edu')
-        # Check if the tool is already installed
-        for it in itl:
-            if tool['name'] == it['name'] and tool['owner'] == it['owner'] and \
-               it['tool_shed'] in tool['tool_shed_url'] and it['latest']:
-                log.debug("({0}/{1}) Tool {2} already installed. Skipping..."
-                          .format(counter, total_num_tools, tool['name']))
-                skipped_tools.append({'name': tool['name'], 'owner': tool['owner']})
+            tool_info.get('tool_shed_url', 'https://toolshed.g2.bx.psu.edu/')
+        ts = ToolShedInstance(url=tool['tool_shed_url'])
+        # Get the set revision or set it to the latest installable revision
+        tool['revision'] = tool_info.get('revision', ts.repositories.
+                                         get_ordered_installable_revisions
+                                         (tool['name'], tool['owner'])[-1])
+        # Check if the tool@revision is already installed
+        for installed in itl:
+            if the_same_tool(installed, tool) and installed['revision'] == tool['revision']:
+                log.debug("({0}/{1}) Tool {2} already installed at revision {3} "
+                          "(Is latest? {4}). Skipping..."
+                          .format(counter, total_num_tools, tool['name'],
+                                  tool['revision'], installed['latest']))
+                skipped_tools.append({'name': tool['name'], 'owner': tool['owner'],
+                                      'revision': tool['revision']})
                 already_installed = True
                 break
         if not already_installed:
-            # Set the payload
-            ts = ToolShedInstance(url=tool['tool_shed_url'])
-            # Iterrate through tool install revisions and install them all
-            # If `revisions` key is not specified in the tools list yaml file,
-            # fetch the latest tool revision
-            revisions = tool_info.get('revisions', [
-                ts.repositories.get_ordered_installable_revisions(
-                    tool['name'], tool['owner'])[-1]])
-            for revision in revisions:
-                tool['revision'] = revision
-                # Initate tool installation
-                start = dt.datetime.now()
-                log.debug('(%s/%s) Installing tool %s from %s to section %s at '
-                          'revision %s (TRT: %s)' %
-                          (counter, total_num_tools, tool['name'], tool['owner'],
-                           tool['tool_panel_section_id'], tool['revision'],
-                           dt.datetime.now() - istart))
-                try:
-                    response = tsc.install_repository_revision(
-                        tool['tool_shed_url'], tool['name'], tool['owner'],
-                        tool['revision'], tool['install_tool_dependencies'],
-                        tool['install_repository_dependencies'],
-                        tool['tool_panel_section_id'])
-                    tool_id = None
-                    tool_status = None
-                    if len(response) > 0:
-                        tool_id = response[0].get('id', None)
-                        tool_status = response[0].get('status', None)
-                    if tool_id and tool_status:
-                        # Possibly an infinite loop here. Introduce a kick-out counter?
-                        log.debug("\tTool installing", extra={'same_line': True})
-                        while tool_status not in ['Installed', 'Error']:
-                            log.debug("", extra={'same_line': True})
-                            time.sleep(10)
-                            tool_status = update_tool_status(tsc, tool_id)
-                        end = dt.datetime.now()
-                        log.debug("\tTool %s installed successfully (in %s) at revision %s"
-                                  % (tool['name'], str(end - start), tool['revision']))
-                    else:
-                        end = dt.datetime.now()
-                        log.error("\tCould not retrieve tool status for {0}".format(tool['name']))
-                except ConnectionError, e:
-                    response = None
+            # Initate tool installation
+            start = dt.datetime.now()
+            log.debug('(%s/%s) Installing tool %s from %s to section %s at '
+                      'revision %s (TRT: %s)' %
+                      (counter, total_num_tools, tool['name'], tool['owner'],
+                       tool['tool_panel_section_id'], tool['revision'],
+                       dt.datetime.now() - istart))
+            try:
+                response = tsc.install_repository_revision(
+                    tool['tool_shed_url'], tool['name'], tool['owner'],
+                    tool['revision'], tool['install_tool_dependencies'],
+                    tool['install_repository_dependencies'],
+                    tool['tool_panel_section_id'])
+                tool_id = None
+                tool_status = None
+                if len(response) > 0:
+                    tool_id = response[0].get('id', None)
+                    tool_status = response[0].get('status', None)
+                if tool_id and tool_status:
+                    # Possibly an infinite loop here. Introduce a kick-out counter?
+                    log.debug("\tTool installing", extra={'same_line': True})
+                    while tool_status not in ['Installed', 'Error']:
+                        log.debug("", extra={'same_line': True})
+                        time.sleep(10)
+                        tool_status = update_tool_status(tsc, tool_id)
                     end = dt.datetime.now()
-                    if default_err_msg in e.body:
-                        log.debug("\tTool %s already installed (at revision %s)" %
-                                  (tool['name'], tool['revision']))
-                    else:
-                        log.error("\t* Error installing a tool (after %s)! Name: %s,"
-                                  "owner: %s, revision: %s, error: %s" %
-                                  (tool['name'], str(end - start), tool['owner'],
-                                   tool['revision'], e.body))
-                        errored_tools.append({'name': tool['name'], 'owner': tool['owner'],
-                                              'revision': tool['revision'], 'error': e.body})
-                outcome = {'tool': tool, 'response': response, 'duration': str(end - start)}
-                responses.append(outcome)
-        counter += 1
+                    log.debug("\tTool %s installed successfully (in %s) at revision %s"
+                              % (tool['name'], str(end - start), tool['revision']))
+                else:
+                    end = dt.datetime.now()
+                    log.error("\tCould not retrieve tool status for {0}".format(tool['name']))
+            except ConnectionError, e:
+                response = None
+                end = dt.datetime.now()
+                if default_err_msg in e.body:
+                    log.debug("\tTool %s already installed (at revision %s)" %
+                              (tool['name'], tool['revision']))
+                else:
+                    log.error("\t* Error installing a tool (after %s)! Name: %s,"
+                              "owner: %s, revision: %s, error: %s" %
+                              (tool['name'], str(end - start), tool['owner'],
+                               tool['revision'], e.body))
+                    errored_tools.append({'name': tool['name'], 'owner': tool['owner'],
+                                          'revision': tool['revision'], 'error': e.body})
+            outcome = {'tool': tool, 'response': response, 'duration': str(end - start)}
+            responses.append(outcome)
 
     log.info("Skipped tools ({0}): {1}".format(
-             len(skipped_tools), [t.get('name') for t in skipped_tools]))
+             len(skipped_tools), [(t['name'], t['revision']) for t in skipped_tools]))
     log.info("Errored tools ({0}): {1}".format(
-             len(errored_tools), [t.get('name') for t in errored_tools]))
+             len(errored_tools), [(t['name'], t['revision']) for t in errored_tools]))
     log.info("All tools listed in '{0}' have been processed.".format(tool_list_file))
     log.info("Total run time: {0}".format(dt.datetime.now() - istart))
 
