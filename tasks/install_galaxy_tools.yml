@@ -22,6 +22,10 @@
   command: chdir={{ galaxy_server_dir }} {{ galaxy_venv_dir }}/bin/python install_tool_shed_tools.py -t shed_tool_list.yaml -a {{ api_key.stdout_lines[0] }} -g http://127.0.0.1:8080/
   ignore_errors: true
 
+- name: Delete Galaxy bootstrap user
+  command: chdir={{ galaxy_server_dir }} {{ galaxy_venv_dir }}/bin/python manage_bootstrap_user.py -c {{ galaxy_config_file }} delete
+  register: api_key
+
 - name: Remove tool management scripts/file
   file: dest={{ galaxy_server_dir }}/{{ item }} state=absent
   with_items:
