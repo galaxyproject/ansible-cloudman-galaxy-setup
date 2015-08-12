@@ -18,6 +18,8 @@ cmg_setup_files:
 # Extra, user defined files to copy, with src and dest properties
 cmg_extra_files: []
 
+galaxy_install_tools: yes
+
 galaxy_user_name: galaxy
 galaxy_admin_user: cloud@galaxyproject.org
 galaxyFS_base_dir: /mnt/galaxy

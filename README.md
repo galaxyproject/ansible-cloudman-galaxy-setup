@@ -38,6 +38,8 @@ Use the following control-flow variables to decide which parts of the role
 you'd like to run:
 
  - `cm_setup_galaxy`: (default: `yes`) whether to run the Galaxy setup step
+ - `galaxy_install_tools`: (default: `yes`) inherited variable from the
+    ansible-tools role. If set, a Galaxy bootstrap user will be created.
 
 Dependencies
 ------------
