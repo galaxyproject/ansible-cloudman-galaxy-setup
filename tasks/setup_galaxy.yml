@@ -20,3 +20,5 @@
 - name: Set Galaxy's PATH
   lineinfile: dest={{ galaxy_server_dir }}/run.sh line="export PATH={{ galaxyFS_base_dir }}/tools/bin:$PATH" insertafter="^#!/bin/sh"
 
+- name: Set (all but 'db') galaxyFS dirs to be owned by the galaxy user
+  shell: chown {{ galaxy_user_name }}:{{ galaxy_user_name }} -R $(ls {{ galaxyFS_base_dir }} | awk '{if($1 != "db"){ print "{{ galaxyFS_base_dir }}/"$1 }}')
