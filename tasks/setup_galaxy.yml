@@ -22,3 +22,7 @@
 
 - name: Set (all but 'db') galaxyFS dirs to be owned by the galaxy user
   shell: chown {{ galaxy_user_name }}:{{ galaxy_user_name }} -R $(ls {{ galaxyFS_base_dir }} | awk '{if($1 != "db"){ print "{{ galaxyFS_base_dir }}/"$1 }}')
+
+- name: Install rpy2 in galaxy virtualenv
+  pip: name=rpy2 version=2.7.8 virtualenv={{ galaxy_server_dir }}/.venv virtualenv_command=virtualenv-2.7
+
