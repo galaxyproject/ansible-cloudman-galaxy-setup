@@ -24,4 +24,13 @@
   pip: name=rpy2 version=2.7.8 virtualenv={{ galaxy_server_dir }}/.venv virtualenv_command=virtualenv-2.7
 
 - name: Set (all but 'db') galaxyFS dirs to be owned by the galaxy user
-  shell: chown {{ galaxy_user_name }}:{{ galaxy_user_name }} -R $(ls {{ galaxyFS_base_dir }} | awk '{if($1 != "db"){ print "{{ galaxyFS_base_dir }}/"$1 }}')
+  shell: chown {{ galaxy_user_name }}:{{ galaxy_user_name }} -R $(ls {{ galaxyFS_base_dir }} | awk '{if($1 != "db"){ print "{{ galaxyFS_base_dir }}/"$1 }}')  # '
+
+- name: Start Galaxy
+  shell: "{{ galaxy_server_dir }}/run.sh --pid-file={{ galaxy_tools_pid_file_name }} --log-file={{ galaxy_tools_log_file_name }} --daemon"
+  become_user: "{{ galaxy_user_name }}"
+  when: cmg_start_galaxy
+
+- name: Wait for Galaxy to start
+  wait_for: port=8080 delay=5 state=started timeout=150
+  when: cmg_start_galaxy

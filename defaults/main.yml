@@ -23,3 +23,8 @@ galaxyFS_base_dir: /mnt/galaxy
 galaxy_server_dir: "{{ galaxyFS_base_dir }}/galaxy-app"
 galaxy_venv_dir: "{{ galaxy_server_dir }}/.venv"
 galaxy_config_file: "{{ galaxy_server_dir }}/config/galaxy.ini"
+
+# Whether or not to start Galaxy process
+cmg_start_galaxy: no
+galaxy_tools_pid_file_name: main.pid
+galaxy_tools_log_file_name: main.log
