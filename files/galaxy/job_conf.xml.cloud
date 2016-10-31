@@ -42,5 +42,6 @@
         <tool id="hisat2" destination="slurm_cluster_cpu4"/>
         <tool id="pear" destination="slurm_cluster_cpu4"/>
         <tool id="diamond" destination="slurm_cluster_cpu4"/>
+        <tool id="spades" destination="slurm_cluster_cpu4"/>
 </tools>
 </job_conf>
