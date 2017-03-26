@@ -1,0 +1,6 @@
+---
+# defaults file for galaxyprojectdotorg.galaxy
+
+- name: restart galaxy
+  shell: "{{ galaxy_server_dir }}/run.sh --pid-file={{ galaxy_tools_pid_file_name }} --log-file={{ galaxy_tools_log_file_name }} --stop-daemon"
+  become_user: "{{ galaxy_user_name }}"
