@@ -12,7 +12,7 @@
   with_items: "{{ cmg_extra_files }}"
 
 - name: Create Galaxy Install DB
-  command: "{{ galaxy_venv_dir }}/bin/python {{ galaxy_server_dir }}/scripts/create_db.py -c {{ galaxy_config_file }} install chdir={{ galaxy_server_dir }}"
+  command: "{{ galaxy_venv_dir }}/bin/python {{ galaxy_server_dir }}/scripts/create_db.py -c {{ galaxy_config_file }} install" chdir="{{ galaxy_server_dir }}"
 
 - name: Set Galaxy's PYTHON_EGG_CACHE
   lineinfile: dest="{{ galaxy_server_dir }}/run.sh" line="export PYTHON_EGG_CACHE={{ galaxyFS_base_dir }}/.python_eggs" insertafter="^#!/bin/sh"
