@@ -4,3 +4,9 @@
 - name: restart galaxy
   shell: "{{ galaxy_server_dir }}/run.sh --pid-file={{ galaxy_tools_pid_file_name }} --log-file={{ galaxy_tools_log_file_name }} --stop-daemon"
   become_user: "{{ galaxy_user_name }}"
+  ignore_errors: True
+  notify: restart galaxy step 2
+
+- name: restart galaxy step 2
+  shell: "{{ galaxy_server_dir }}/run.sh --pid-file={{ galaxy_tools_pid_file_name }} --log-file={{ galaxy_tools_log_file_name }} --daemon"
+  become_user: "{{ galaxy_user_name }}"
