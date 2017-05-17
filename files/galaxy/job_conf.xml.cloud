@@ -43,5 +43,12 @@
         <tool id="pear" destination="slurm_cluster_cpu4"/>
         <tool id="diamond" destination="slurm_cluster_cpu4"/>
         <tool id="spades" destination="slurm_cluster_cpu4"/>
+        <tool id="fastqc" destination="slurm_cluster_cpu4"/>
+        <tool id="stringtie" destination="slurm_cluster_cpu4"/>
+        <tool id="tsne" destination="slurm_cluster_cpu4"/>
+        <tool id="heatmap2" destination="slurm_cluster_cpu4"/>
+        <tool id="flagstat" destination="slurm_cluster_cpu4"/>
+        <tool id="deseq2" destination="slurm_cluster_cpu4"/>
+        <tool id="featurecounts" destination="slurm_cluster_cpu4"/>
 </tools>
 </job_conf>
