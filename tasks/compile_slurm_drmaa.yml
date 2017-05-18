@@ -1,0 +1,29 @@
+---
+# Compile Slurm DRMAA library
+
+- name: Create a tmp Slurm DRMAA dir
+  file:
+    path: /mnt/slurm-drmaa
+    state: directory
+    mode: 0755
+    owner: "{{ galaxy_user_name }}"
+    group: "{{ galaxy_user_name }}"
+  become_user: root
+
+- name: Download Slurm DRMAA library
+  get_url:
+    url: http://apps.man.poznan.pl/trac/slurm-drmaa/downloads/9
+    dest: /mnt/slurm-drmaa/slurm_drmaa.tar.gz
+
+- name: Extract Slurm DRMAA
+  unarchive:
+    src: /mnt/slurm-drmaa/slurm_drmaa.tar.gz
+    dest: /mnt/slurm-drmaa
+    remote_src: True
+
+- name: Build Slurm DRMAA
+  shell: cd /mnt/slurm-drmaa/slurm-drmaa-1.0.7 && ./configure --prefix={{ galaxyFS_base_dir }}/slurm-drmaa/ CFLAGS='-O0' && make
+
+- name: Make Slurm DRMAA
+  shell: cd /mnt/slurm-drmaa/slurm-drmaa-1.0.7 && make install
+  become_user: root

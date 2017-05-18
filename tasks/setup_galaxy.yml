@@ -27,8 +27,21 @@
   npm:
     path: "{{ galaxy_server_dir }}/lib/galaxy/web/proxy/js"
 
-- name: Set (all but 'db') galaxyFS dirs to be owned by the galaxy user
-  shell: chown {{ galaxy_user_name }}:{{ galaxy_user_name }} -R $(ls {{ galaxyFS_base_dir }} | awk '{if($1 != "db"){ print "{{ galaxyFS_base_dir }}/"$1 }}')  # '
+- name: Set galaxyFS dirs to be owned by the galaxy user
+  file:
+    dest: "{{ galaxyFS_base_dir }}/{{ item }}"
+    owner: "{{ galaxy_user_name }}"
+    group: "{{ galaxy_user_name }}"
+    recurse: yes
+    state: directory
+  with_items:
+    - "custom-indices"
+    - "galaxy-app"
+    - "shed_tools"
+    - "tool_dependencies"
+    - "tools"
+    - "upload_store"
+  become_user: root
 
 - name: Start Galaxy
   shell: "{{ galaxy_server_dir }}/run.sh --pid-file={{ galaxy_tools_pid_file_name }} --log-file={{ galaxy_tools_log_file_name }} --daemon"
