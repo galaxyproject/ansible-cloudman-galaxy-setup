@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <job_conf>
     <plugins workers="4">
-        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner" />
+        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
+            <param id="drmaa_library_path">/mnt/galaxy/slurm-drmaa/lib/libdrmaa.so</param>
+        </plugin>
         <plugin id="pulsar_rest" type="runner" load="galaxy.jobs.runners.pulsar:PulsarRESTJobRunner" />
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner" workers="4" />
     </plugins>
@@ -43,5 +45,12 @@
         <tool id="pear" destination="slurm_cluster_cpu4"/>
         <tool id="diamond" destination="slurm_cluster_cpu4"/>
         <tool id="spades" destination="slurm_cluster_cpu4"/>
+        <tool id="fastqc" destination="slurm_cluster_cpu4"/>
+        <tool id="stringtie" destination="slurm_cluster_cpu4"/>
+        <tool id="tsne" destination="slurm_cluster_cpu4"/>
+        <tool id="heatmap2" destination="slurm_cluster_cpu4"/>
+        <tool id="flagstat" destination="slurm_cluster_cpu4"/>
+        <tool id="deseq2" destination="slurm_cluster_cpu4"/>
+        <tool id="featurecounts" destination="slurm_cluster_cpu4"/>
 </tools>
 </job_conf>

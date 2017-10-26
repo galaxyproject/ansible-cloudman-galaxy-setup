@@ -3,6 +3,7 @@
 
 # Control-flow variables
 cm_setup_galaxy: yes
+cm_setup_slurm_drmaa: yes
 
 # Configuration options
 cmg_setup_files:
