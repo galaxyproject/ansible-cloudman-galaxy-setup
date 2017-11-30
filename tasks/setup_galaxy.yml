@@ -29,6 +29,16 @@
   npm:
     path: "{{ galaxy_server_dir }}/lib/galaxy/web/proxy/js"
 
+- name: Place jupyter conf files
+  file:
+    src: "galaxy/{{ item }}"
+    dest: "{{ galaxy_server_dir }}/config/plugins/interactive_environments/jupyter/config/{{ item }}"
+    owner: "{{ galaxy_user_name }}"
+    group: "{{ galaxy_user_name }}"
+  with_items:
+    - jupyter.ini
+    - allowed_images.yml
+
 - name: Set galaxyFS dirs to be owned by the galaxy user
   file:
     dest: "{{ galaxyFS_base_dir }}/{{ item }}"
