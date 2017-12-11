@@ -30,7 +30,7 @@
     path: "{{ galaxy_server_dir }}/lib/galaxy/web/proxy/js"
 
 - name: Place jupyter conf files
-  file:
+  copy:
     src: "galaxy/{{ item }}"
     dest: "{{ galaxy_server_dir }}/config/plugins/interactive_environments/jupyter/config/{{ item }}"
     owner: "{{ galaxy_user_name }}"
